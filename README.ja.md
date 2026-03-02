@@ -328,6 +328,11 @@ English README is available at [`README.md`](README.md).
   - `--all`で全スキル一括レビュー、`--skip-tests`でクイックトリアージ、`--project-root`で他プロジェクトのレビューに対応。
   - APIキー不要。
 
+- **スキルアイデアマイナー** (`skill-idea-miner`)
+  - Claude Codeセッションログからスキルアイデア候補をマイニングし、新規性・実現可能性・トレーディング価値でスコアリングして優先順位付きバックログを管理。
+  - 週次スキル自動生成パイプラインで使用。手動実行も可能。
+  - APIキー不要。
+
 ## スキル自己改善ループ
 
 スキル品質を継続的にレビュー・改善する自動パイプライン。毎日の`launchd`ジョブが1つのスキルを選択し、デュアルアクシスレビュアーでスコアリングし、スコアが90/100未満の場合は`claude -p`で改善を適用してPRを作成します。
@@ -380,6 +385,64 @@ launchctl start com.trade-analysis.skill-improvement
 | `skills/dual-axis-skill-reviewer/` | レビュアースキル（スコアリングエンジン） |
 | `logs/.skill_improvement_state.json` | ラウンドロビン状態と履歴 |
 | `reports/skill-improvement-log/` | 日次サマリーレポート |
+
+## スキル自動生成パイプライン
+
+セッションログからスキルアイデアをマイニング（週次）し、設計・レビュー・PR作成（日次）を自動実行するパイプライン。自己改善ループと連携してスキルカタログを継続的に拡張します。
+
+### 仕組み
+
+1. **週次マイニング** — Claude Codeセッションログをスキャンし、スキル化できる繰り返しパターンを検出。各アイデアを新規性・実現可能性・トレーディング価値でスコアリング。
+2. **バックログスコアリング** — ランク付けされたアイデアを`logs/.skill_generation_backlog.yaml`にステータス追跡付きで保存（`pending`、`in_progress`、`completed`、`design_failed`、`review_failed`、`pr_failed`）。
+3. **日次選択** — 最高スコアの`pending`アイデアを選択。`design_failed`/`pr_failed`は1回リトライ（`review_failed`はコンテンツ品質の問題を示すため最終判定）。
+4. **設計＆レビュー** — スキルデザイナーが完全なスキル（SKILL.md、リファレンス、スクリプト）を構築し、デュアルアクシスレビュアーがスコアリング。スコアが低い場合は`review_failed`。
+5. **PR作成** — 新スキルをフィーチャーブランチにコミットし、人間レビュー用にGitHub PRを作成。
+
+### 手動実行
+
+```bash
+# 週次: セッションログからアイデアをマイニング・スコアリング
+python3 scripts/run_skill_generation_pipeline.py --mode weekly --dry-run
+
+# 日次: バックログの最高スコアアイデアからスキルを設計
+python3 scripts/run_skill_generation_pipeline.py --mode daily --dry-run
+
+# フルラン（ブランチ作成、スキル設計、PR作成）
+python3 scripts/run_skill_generation_pipeline.py --mode daily
+```
+
+### launchd設定 (macOS)
+
+週次と日次の2つの`launchd`エージェントで自動実行:
+
+```bash
+# エージェントをインストール
+cp launchd/com.trade-analysis.skill-generation-weekly.plist ~/Library/LaunchAgents/
+cp launchd/com.trade-analysis.skill-generation-daily.plist ~/Library/LaunchAgents/
+launchctl load ~/Library/LaunchAgents/com.trade-analysis.skill-generation-weekly.plist
+launchctl load ~/Library/LaunchAgents/com.trade-analysis.skill-generation-daily.plist
+
+# 確認
+launchctl list | grep skill-generation
+
+# 手動トリガー
+launchctl start com.trade-analysis.skill-generation-weekly
+launchctl start com.trade-analysis.skill-generation-daily
+```
+
+### 主要ファイル
+
+| ファイル | 用途 |
+|---------|------|
+| `scripts/run_skill_generation_pipeline.py` | オーケストレーションスクリプト（マイニング、選択、設計、レビュー、PR） |
+| `scripts/run_skill_generation.sh` | launchd用シェルラッパー |
+| `launchd/com.trade-analysis.skill-generation-weekly.plist` | 週次マイニングスケジュール（土曜06:00） |
+| `launchd/com.trade-analysis.skill-generation-daily.plist` | 日次生成スケジュール（07:00） |
+| `skills/skill-idea-miner/` | マイニング＆スコアリングスキル |
+| `skills/skill-designer/` | スキル設計プロンプトビルダー |
+| `logs/.skill_generation_backlog.yaml` | ステータス追跡付きスコア済みアイデアバックログ |
+| `logs/.skill_generation_state.json` | 実行履歴と状態 |
+| `reports/skill-generation-log/` | 日次生成サマリーレポート |
 
 ## カスタマイズと貢献
 - トリガー説明や機能メモを調整する場合は、各フォルダ内の`SKILL.md`を更新してください。ZIP化する際はフロントマター`name`がフォルダ名と一致しているか確認してください。
