@@ -312,6 +312,7 @@ Curated Claude skills for equity investors and traders. Each skill bundles promp
 - **FinViz Screener** (`finviz-screener`)
   - Translates natural-language stock screening requests (Japanese/English) into FinViz screener filter codes and opens the results in Chrome.
   - Supports 500+ filter codes across fundamentals (P/E, dividend, growth, margins), technicals (RSI, SMA, patterns), and descriptives (sector, market cap, country).
+  - **Theme & Sub-theme cross-screening:** Combine FinViz's 30+ investment themes and 268 sub-themes with any filter. Screen for cross-sector narratives like "AI × Logistics", "Data Centers × Power Infrastructure", or "Cybersecurity × Cloud" — something traditional sector/industry filters cannot do. Use `--themes` and `--subthemes` to mix multiple themes in a single query (e.g., `--themes "artificialintelligence,cybersecurity" --filters "cap_midover"`).
   - Auto-detects FINVIZ Elite from `$FINVIZ_API_KEY` environment variable; falls back to public screener when not set.
   - Includes 14 pre-built screening recipes (high dividend value, small-cap growth, oversold large-caps, breakout candidates, AI/theme investing, etc.).
   - No API key required for basic use (public FinViz screener). FINVIZ Elite optional for enhanced features.

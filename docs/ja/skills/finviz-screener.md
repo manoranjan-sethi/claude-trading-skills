@@ -16,6 +16,9 @@ permalink: /ja/skills/finviz-screener/
 
 <span class="badge badge-free">API不要</span> <span class="badge badge-optional">FINVIZ Elite任意</span>
 
+[スキルパッケージをダウンロード (.skill)](https://github.com/tradermonty/claude-trading-skills/raw/main/skill-packages/finviz-screener.skill){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 }
+[GitHubでソースを見る](https://github.com/tradermonty/claude-trading-skills/tree/main/skills/finviz-screener){: .btn .fs-5 .mb-4 .mb-md-0 }
+
 <details open markdown="block">
   <summary>目次</summary>
   {: .text-delta }
@@ -32,6 +35,7 @@ FinViz Screenerは、日本語または英語の自然言語による指示をFi
 **主な特徴:**
 - 日本語・英語どちらの自然言語でも条件指定が可能
 - 500以上のFinVizフィルターコードに対応（ファンダメンタル、テクニカル、記述的フィルター）
+- **テーマ×サブテーマのクロス検索** -- 30以上の投資テーマと268のサブテーマを組み合わせ、「AI × 物流」「データセンター × 電力」「サイバーセキュリティ × クラウド」のようなセクター横断スクリーニングが可能
 - FINVIZ Elite の自動検出（`$FINVIZ_API_KEY` 環境変数から判定）
 - Chrome優先のブラウザ起動（OS別のフォールバック対応）
 - URLインジェクション防止のための厳格なフィルター検証
@@ -241,6 +245,56 @@ https://finviz.com/screener.ashx?v=121&f=cap_mega,fa_div_o3,fa_pe_u15,ta_sma200_
 ```
 
 **なぜ有用か:** `--url-only` オプションを使えば、ブラウザを開かずにURLだけを取得できます。スクリプトやSlack連携、定期実行での利用に便利です。
+
+---
+
+### 例9: テーマのクロス検索（AI × 物流、データセンター × 電力）
+
+従来のセクター/業種フィルターは1次元的な分類に限定されます。テーマ/サブテーマフィルターを使えば、セクターを横断する*ナラティブ*軸でスクリーニングが可能です。
+
+**プロンプトA: AI × 物流**
+```
+AI関連の物流銘柄で、中型以上、直近四半期パフォーマンス良好なものを探して
+```
+
+**コマンド:**
+```bash
+python3 skills/finviz-screener/scripts/open_finviz_screener.py \
+  --themes "artificialintelligence" \
+  --subthemes "ecommercelogistics" \
+  --filters "cap_midover,ta_perf_13wup" \
+  --url-only
+```
+
+**プロンプトB: データセンター × 電力インフラ**
+```
+データセンターと電力インフラ関連の銘柄を見せて
+```
+
+**コマンド:**
+```bash
+python3 skills/finviz-screener/scripts/open_finviz_screener.py \
+  --subthemes "aboringdatacenters,energypower" \
+  --url-only
+```
+
+**プロンプトC: サイバーセキュリティ × クラウド**
+```
+サイバーセキュリティとクラウド関連で、ROEが高い銘柄
+```
+
+**コマンド:**
+```bash
+python3 skills/finviz-screener/scripts/open_finviz_screener.py \
+  --themes "cybersecurity" \
+  --subthemes "aicloud" \
+  --filters "fa_roe_o15" \
+  --url-only
+```
+
+**なぜ有用か:** セクターフィルターは企業の*業種*（テクノロジー、公益事業、不動産等）で分類します。テーマフィルターは企業が*乗っているトレンド*で分類します。テーマとサブテーマを組み合わせることで、世俗的な成長ナラティブの交差点にある銘柄を発掘できます。たとえば、AI自動化に投資する物流企業や、データセンター電力需要に恩恵を受ける電力会社など、従来のセクターフィルターでは見つけられない銘柄群です。
+
+---
 
 ### スクリーニングレシピ
 
@@ -472,11 +526,15 @@ python3 scripts/open_finviz_screener.py [OPTIONS]
 
 | オプション | 説明 | デフォルト |
 |-----------|------|-----------|
-| `--filters` | カンマ区切りのフィルターコード（必須） | - |
+| `--filters` | カンマ区切りのフィルターコード* | - |
+| `--themes` | カンマ区切りのテーマスラッグ*（例: `artificialintelligence,cybersecurity`） | - |
+| `--subthemes` | カンマ区切りのサブテーマスラッグ*（例: `aicloud,energypower`） | - |
 | `--view` | ビュータイプ: overview, valuation, financial, technical, ownership, performance, custom | overview |
 | `--order` | ソート順（例: `-marketcap`, `dividendyield`） | - |
 | `--elite` | Elite モードを強制 | `$FINVIZ_API_KEY` から自動検出 |
 | `--url-only` | URLを出力するだけでブラウザを開かない | false |
+
+\* `--filters`、`--themes`、`--subthemes` のうち少なくとも1つが必須です。
 
 ### よく使うフィルターコード
 

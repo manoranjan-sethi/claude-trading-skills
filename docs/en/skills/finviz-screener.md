@@ -14,6 +14,9 @@ permalink: /en/skills/finviz-screener/
 Translate natural language stock screening requests into FinViz screener filter URLs and open them in Chrome. Supports both Japanese and English input.
 {: .fs-6 .fw-300 }
 
+[Download Skill Package (.skill)](https://github.com/tradermonty/claude-trading-skills/raw/main/skill-packages/finviz-screener.skill){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 }
+[View Source on GitHub](https://github.com/tradermonty/claude-trading-skills/tree/main/skills/finviz-screener){: .btn .fs-5 .mb-4 .mb-md-0 }
+
 <details open markdown="block">
   <summary>Table of Contents</summary>
   {: .text-delta }
@@ -36,6 +39,7 @@ FinViz Screener bridges the gap between what you want to find and how FinViz exp
 
 **Key capabilities:**
 - 500+ filter codes across fundamentals (P/E, dividends, growth, margins), technicals (RSI, SMA, chart patterns), and descriptives (sector, market cap, country)
+- **Theme & Sub-theme cross-screening** -- Combine 30+ investment themes and 268 sub-themes with any filter to screen for cross-sector narratives (e.g., "AI x Logistics", "Data Centers x Power Infrastructure", "Cybersecurity x Cloud")
 - View type selection: Overview, Valuation, Financial, Technical, Ownership, Performance, Custom
 - Sort order control (ascending or descending by any column)
 - Range filter syntax for precise criteria (e.g., `fa_div_3to8` for dividend yield 3-8%)
@@ -191,6 +195,56 @@ python3 skills/finviz-screener/scripts/open_finviz_screener.py \
 ```
 
 **Why useful:** The `--url-only` flag prints the URL without opening a browser, making it suitable for scripting, logging, or embedding in other workflows.
+
+---
+
+### Example 9: Theme Cross-Screening (AI x Logistics, Data Centers x Power)
+
+Traditional sector/industry filters limit you to a single dimension. FinViz's theme and sub-theme filters let you screen along *narrative* axes that cut across sectors.
+
+**Prompt A: AI x Logistics**
+```
+Find mid-cap and above stocks in both AI and logistics themes with strong quarterly performance
+```
+
+**Command:**
+```bash
+python3 skills/finviz-screener/scripts/open_finviz_screener.py \
+  --themes "artificialintelligence" \
+  --subthemes "ecommercelogistics" \
+  --filters "cap_midover,ta_perf_13wup" \
+  --url-only
+```
+
+**Prompt B: Data Centers x Power Infrastructure**
+```
+Show me data center and power infrastructure stocks
+```
+
+**Command:**
+```bash
+python3 skills/finviz-screener/scripts/open_finviz_screener.py \
+  --subthemes "aboringdatacenters,energypower" \
+  --url-only
+```
+
+**Prompt C: Cybersecurity x Cloud**
+```
+Cybersecurity and cloud stocks with high ROE
+```
+
+**Command:**
+```bash
+python3 skills/finviz-screener/scripts/open_finviz_screener.py \
+  --themes "cybersecurity" \
+  --subthemes "aicloud" \
+  --filters "fa_roe_o15" \
+  --url-only
+```
+
+**Why useful:** Sector filters group companies by what they *are* (Technology, Utilities, Real Estate). Theme filters group companies by what *trend* they ride. Combining themes and sub-themes uncovers stocks at the intersection of secular growth narratives -- e.g., logistics companies investing in AI automation, or utilities exposed to data center power demand -- that traditional sector filters would miss entirely.
+
+---
 
 ### Screening Recipes
 
@@ -367,11 +421,15 @@ The FinViz results page itself shows stocks in a sortable table. Use the view se
 
 | Argument | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `--filters` | Yes | -- | Comma-separated FinViz filter codes |
+| `--filters` | No* | -- | Comma-separated FinViz filter codes |
+| `--themes` | No* | -- | Comma-separated theme slugs (e.g., `artificialintelligence,cybersecurity`) |
+| `--subthemes` | No* | -- | Comma-separated sub-theme slugs (e.g., `aicloud,energypower`) |
 | `--elite` | No | Auto-detected | Force Elite mode (`elite.finviz.com`) |
 | `--view` | No | `overview` | View type: overview, valuation, financial, technical, ownership, performance, custom |
 | `--order` | No | None | Sort order code (e.g., `-marketcap`, `dividendyield`). Prefix `-` for descending |
 | `--url-only` | No | `false` | Print URL without opening a browser |
+
+\* At least one of `--filters`, `--themes`, or `--subthemes` is required.
 
 ### View Type Codes
 
