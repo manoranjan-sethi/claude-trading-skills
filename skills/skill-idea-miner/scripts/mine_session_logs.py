@@ -53,19 +53,20 @@ REJECTED_CATEGORIES = {
 }
 
 # Keywords in title/description that indicate a non-trading skill.
+# Use specific phrases to avoid false positives on trading-adjacent tools
+# (e.g. "slack-alert" for trade notifications is legitimate).
 REJECTED_KEYWORDS = [
     "codebase-navigator",
     "code-navigation",
     "doc-generator",
-    "doc-site",
+    "doc-site-generator",
     "git-bulk",
-    "skill-score",
+    "skill-score-optimizer",
     "batch-patcher",
     "meeting-scheduler",
-    "email-",
-    "slack-",
-    "jira-",
-    "confluence-",
+    "meeting-minutes",
+    "jira-integration",
+    "confluence-page",
 ]
 
 AUTOMATED_PROMPT_PREFIXES = [
@@ -754,8 +755,9 @@ def run(args: argparse.Namespace) -> int:
         date_str = datetime.now(tz=timezone.utc).strftime("%Y%m%d")
         for i, c in enumerate(candidates):
             c["id"] = f"raw_{date_str}_{i + 1:03d}"
-            # Handle backward compatibility: LLM might output 'name' instead of 'title'
-            if "title" not in c and "name" in c:
+            # Handle backward compatibility: LLM might output 'name' instead of 'title',
+            # or return title as null alongside a valid 'name'.
+            if (not c.get("title")) and c.get("name"):
                 c["title"] = c.pop("name")
 
     # Deterministic domain filter (only when using default allowlist)

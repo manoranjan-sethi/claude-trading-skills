@@ -845,12 +845,70 @@ def test_filter_handles_non_string_fields(mine_module):
     assert len(result) == 2
 
 
-def test_filter_rejects_name_based_keyword_after_normalization(mine_module):
-    """name->title normalization should happen before filter (tested via run)."""
-    # Simulate a candidate that used 'name' instead of 'title'
-    # After normalization in run(), title should be set
+def test_filter_rejects_keyword_already_in_title(mine_module):
+    """Filter rejects candidates whose title matches a rejected keyword."""
     candidates = [
         {"title": "codebase-navigator", "category": "other", "description": ""},
     ]
     result = mine_module.filter_non_trading_candidates(candidates)
     assert len(result) == 0
+
+
+def test_run_normalizes_null_title_from_name_then_filters(mine_module, tmp_path: Path):
+    """run() normalizes title=None + name=X before filter, so keyword rejection works."""
+    import types
+    from unittest.mock import patch
+
+    import yaml
+
+    output_dir = tmp_path / "out"
+    output_dir.mkdir()
+
+    # LLM returns title=None with name containing a rejected keyword
+    fake_candidates = [
+        {
+            "title": None,
+            "name": "codebase-navigator",
+            "category": "other",
+            "description": "Navigate code",
+        },
+        {"title": "earnings-tool", "category": "trade-review", "description": "Review trades"},
+    ]
+
+    args = types.SimpleNamespace(
+        output_dir=str(output_dir),
+        project=None,
+        lookback_days=7,
+        dry_run=False,
+    )
+
+    with (
+        patch.object(mine_module, "find_project_dirs", return_value=[("proj", tmp_path)]),
+        patch.object(
+            mine_module,
+            "list_session_logs",
+            return_value=[("proj", tmp_path / "fake.jsonl")],
+        ),
+        patch.object(
+            mine_module,
+            "parse_session",
+            return_value={
+                "user_messages": ["hello"],
+                "tool_uses": [],
+                "timestamps": [],
+                "timed_entries": [],
+            },
+        ),
+        patch.object(mine_module, "abstract_with_llm", return_value=fake_candidates),
+    ):
+        rc = mine_module.run(args)
+
+    assert rc == 0
+
+    output_path = output_dir / "raw_candidates.yaml"
+    data = yaml.safe_load(output_path.read_text(encoding="utf-8"))
+    candidates = data["candidates"]
+
+    # codebase-navigator should be filtered out after name->title normalization
+    assert len(candidates) == 1
+    assert candidates[0]["title"] == "earnings-tool"
