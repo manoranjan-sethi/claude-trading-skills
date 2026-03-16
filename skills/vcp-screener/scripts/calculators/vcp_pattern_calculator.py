@@ -93,6 +93,7 @@ def calculate_vcp_pattern(
     sorted_highs = sorted(swing_highs, key=lambda x: x[1], reverse=True)
     best_contractions = []
     best_score = -1
+    best_valid = False
 
     for start_high in sorted_highs[:3]:
         candidate = _build_contractions_from(
@@ -104,19 +105,19 @@ def calculate_vcp_pattern(
             dates,
             min_contraction_days=min_contraction_days,
         )
-        if len(candidate) > len(best_contractions) or (
-            len(candidate) == len(best_contractions) and len(candidate) >= min_contractions
-        ):
-            # Evaluate which has better validation
-            v = (
-                _validate_vcp(candidate, n, min_contractions, t1_depth_min, contraction_ratio)
-                if len(candidate) >= min_contractions
-                else {"valid": False}
-            )
-            s = _score_vcp(candidate, v) if len(candidate) >= min_contractions else 0
-            if s > best_score:
-                best_contractions = candidate
-                best_score = s
+        if len(candidate) >= min_contractions:
+            v = _validate_vcp(candidate, n, min_contractions, t1_depth_min, contraction_ratio)
+            s = _score_vcp(candidate, v)
+        else:
+            v = {"valid": False}
+            s = 0
+        # Compare: valid first, then score, then length as tiebreaker
+        key = (int(v.get("valid", False)), s, len(candidate))
+        best_key = (int(best_valid), best_score, len(best_contractions))
+        if key > best_key:
+            best_contractions = candidate
+            best_score = s
+            best_valid = v.get("valid", False)
 
     contractions = best_contractions
 
