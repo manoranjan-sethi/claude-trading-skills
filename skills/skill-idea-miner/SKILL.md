@@ -15,7 +15,29 @@ prioritized backlog for downstream skill generation.
 - Manual backlog refresh: `python3 scripts/run_skill_generation_pipeline.py --mode weekly`
 - Dry-run to preview candidates without LLM scoring
 
+## Prerequisites
+
+- **Python 3.10+** with `pyyaml` package
+- **Claude CLI** installed and authenticated (`claude --version` to verify)
+- **Session logs** in `~/.claude/projects/<project>/` (created automatically by Claude Code)
+- No API keys required (uses Claude CLI for LLM calls)
+
 ## Workflow
+
+### Quick Start
+
+```bash
+# Dry-run: preview mined candidates without LLM scoring
+python3 scripts/mine_session_logs.py --dry-run --output-dir reports/
+
+# Full mining with scoring (requires Claude CLI)
+python3 scripts/mine_session_logs.py --output-dir reports/
+
+# Score existing candidates
+python3 scripts/score_ideas.py \
+  --candidates reports/raw_candidates.yaml \
+  --output-dir logs/
+```
 
 ### Stage 1: Session Log Mining
 
